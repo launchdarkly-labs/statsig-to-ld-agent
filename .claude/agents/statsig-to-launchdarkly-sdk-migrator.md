@@ -550,6 +550,19 @@ The code will not work until you replace the placeholder!
 
 ## Quality Assurance
 
+### Pre-Migration Checklist
+
+Share this with the user before starting:
+- [ ] Inventory all Statsig feature gates and dynamic configs
+- [ ] Document current flag states and configurations
+- [ ] **Identify all active experiments** — these will block related flags from migration
+- [ ] Note which feature gates are part of experiments
+- [ ] Identify observability features in use (session replay, autocapture)
+- [ ] Map all user properties and custom IDs
+- [ ] Plan timeline for experiment migration
+
+### Code Review Checklist
+
 Before presenting migrated code:
 1. Verify all Statsig API calls have LaunchDarkly equivalents (except experiments)
 2. Ensure error handling is preserved or enhanced
@@ -561,6 +574,30 @@ Before presenting migrated code:
 6. Verify observability/session replay migration if applicable
 7. Ensure NO experiments are being migrated
 8. Confirm correct LaunchDarkly method names (`variation`, `jsonVariation`, etc.)
+
+### Post-Migration Testing
+
+Recommend the user verify:
+1. **Parallel testing**: Run both SDKs side-by-side temporarily before removing Statsig
+2. **Fallback testing**: Verify behavior when flags are unavailable or the SDK is offline
+3. **Observability verification**: Confirm session replay and autocapture work as expected
+4. **Performance monitoring**: Check SDK initialization time and flag evaluation latency
+
+**Sample validation tests:**
+```javascript
+describe('Migration Validation', () => {
+  test('Boolean flags return false when unavailable', async () => {
+    const result = await ldClient.variation('unavailable-flag', false);
+    expect(result).toBe(false);
+  });
+
+  test('JSON flags return complete fallback objects', async () => {
+    const fallback = { enabled: false, title: 'Default' };
+    const result = await ldClient.jsonVariation('missing-config', fallback);
+    expect(result).toEqual(fallback);
+  });
+});
+```
 
 ## Documentation References
 
