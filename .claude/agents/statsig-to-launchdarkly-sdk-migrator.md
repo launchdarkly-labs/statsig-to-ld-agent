@@ -1,19 +1,22 @@
 ---
 name: statsig-to-launchdarkly-sdk-migrator
-description: Use this agent when you need to migrate JavaScript/TypeScript/React/Node.js code from the Statsig SDK to LaunchDarkly. This agent is a thin pointer to the canonical skill at `skills/statsig-to-launchdarkly-migrator/SKILL.md` in this repo. The skill is the source of truth — it handles latest-SDK-version resolution via live npm lookup, the `ldcli` + `.env` key flow, and ships with static + LLM-as-judge evals. CRITICAL: agentic coding tools routinely import a stale LaunchDarkly Node SDK pulled from training data; the skill always resolves the current version via live npm lookup before writing any code.
+description: Legacy compatibility shim for the Statsig→LaunchDarkly migration skill. The canonical implementation is now a Claude Code skill at `skills/statsig-to-launchdarkly-migrator/SKILL.md` — load that for migrations. This file exists only so existing installs at `~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md` keep resolving. Use the skill when migrating JavaScript/TypeScript/React/Node.js code from Statsig to LaunchDarkly. The skill handles latest-SDK-version resolution via live npm lookup, the `ldcli` + `.env` key flow, and ships with static + LLM-as-judge evals. CRITICAL: agentic coding tools routinely import a stale LaunchDarkly Node SDK pulled from training data; the skill always resolves the current version via live npm lookup before writing any code.
 model: sonnet
 color: purple
 ---
 
-# Statsig → LaunchDarkly migration
+# Statsig → LaunchDarkly migration (legacy compat shim)
 
-This agent has been superseded by the skill at:
+The canonical implementation is now a Claude Code skill at:
 
 ```
 skills/statsig-to-launchdarkly-migrator/SKILL.md
 ```
 
-The skill is the canonical implementation. It adds, over the previous agent:
+This file exists only as a compatibility shim for installs that still resolve
+the old agent path (`~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md`).
+New installs should use the skill path instead. The skill adds, over the previous
+agent definition:
 
 1. **Live SDK-version resolution** — `scripts/resolve-versions.mjs` runs `npm view` for every LaunchDarkly package before writing any `import` or `package.json` edit. Defeats the stale-training-data Node SDK problem.
 2. **`ldcli` + `.env` SDK-key flow** — `scripts/install-ldcli.mjs` + `scripts/write-env.mjs` install ldcli, accept the key on stdin (never via Claude), and refuse to write if `.env` is not gitignored.

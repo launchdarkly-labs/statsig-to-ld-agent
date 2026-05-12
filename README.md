@@ -3,7 +3,7 @@
 A Claude Code skill that automates migrating from the Statsig SDK to LaunchDarkly. Covers JavaScript, TypeScript, React, and Node.js SDKs. Handles feature gates, dynamic configs, contexts, and observability. Preserves experiments (which have no 1:1 LaunchDarkly mapping).
 
 > **What's new in this release**
-> - **Skill (was: agent).** Canonical source of truth is now `skills/statsig-to-launchdarkly-migrator/SKILL.md` with progressive-disclosure references and helper scripts. The agent file at `.claude/agents/` is a thin pointer for backwards compatibility.
+> - **Now a Claude Code skill.** Canonical source of truth is `skills/statsig-to-launchdarkly-migrator/SKILL.md` with progressive-disclosure references and helper scripts. The file at `.claude/agents/statsig-to-launchdarkly-sdk-migrator.md` is a thin compatibility shim for users who installed the older agent — it just points at the skill.
 > - **Live SDK version resolution.** A `scripts/resolve-versions.mjs` helper runs `npm view` for every LaunchDarkly package before the skill writes any imports or `package.json` edits. This kills the stale-Node-SDK problem (agentic tools routinely import `launchdarkly-node-server-sdk@5.x` from training data — the current package is `@launchdarkly/node-server-sdk`).
 > - **`ldcli` + `.env` key flow.** Helper scripts install `ldcli` (if missing), accept the LaunchDarkly Client-Side ID on stdin (never via Claude's transcript), and refuse to write `.env` if it isn't gitignored.
 > - **Two eval harnesses.** Static assertions (9 rules over source code + a package.json version check) and an LLM-as-judge runner that scores migrations on a five-dimension rubric.
@@ -30,7 +30,7 @@ A Claude Code skill that automates migrating from the Statsig SDK to LaunchDarkl
 │       ├── static/                    # CI-able regex/AST assertions
 │       └── judge/                     # LLM-as-judge rubric + runner
 ├── .claude/agents/
-│   └── statsig-to-launchdarkly-sdk-migrator.md   # thin pointer to the skill
+│   └── statsig-to-launchdarkly-sdk-migrator.md   # legacy compat shim (points at the skill)
 ├── tests/                             # example Statsig apps to migrate
 ├── README.md
 └── LICENSE
@@ -54,13 +54,14 @@ The skill needs to live in your project (or under `~/.claude/skills/`) so Claude
 git clone https://github.com/yeutterg/claude-statsig-to-launchdarkly-sdk-migrator.git
 cd claude-statsig-to-launchdarkly-sdk-migrator
 
-# Or, if you only want the agent pointer (no helper scripts, no evals):
-mkdir -p ~/.claude/agents/
-curl -o ~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md \
-  https://raw.githubusercontent.com/yeutterg/claude-statsig-to-launchdarkly-sdk-migrator/main/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md
+# Or install just the skill globally for any project:
+mkdir -p ~/.claude/skills/
+cp -R skills/statsig-to-launchdarkly-migrator ~/.claude/skills/
 ```
 
-To use the full skill against your own project, copy `skills/statsig-to-launchdarkly-migrator/` into your project root (or symlink it from `~/.claude/skills/`).
+To use the skill against your own project, copy `skills/statsig-to-launchdarkly-migrator/` into your project root (or symlink it from `~/.claude/skills/`).
+
+> Legacy compat: if you previously installed the agent file at `~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md`, it still works — it now just points at the canonical skill. New installs should use the skill path above.
 
 ## Usage
 

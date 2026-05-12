@@ -1,6 +1,6 @@
 # Statsig to LaunchDarkly Migration Test Files
 
-This directory contains comprehensive test files demonstrating all Statsig SDK features that need to be migrated to LaunchDarkly. These files serve as test cases for the migration agent.
+This directory contains comprehensive test files demonstrating all Statsig SDK features that need to be migrated to LaunchDarkly. These files serve as test cases for the migration skill.
 
 ## Test Files
 
@@ -40,8 +40,10 @@ This directory contains comprehensive test files demonstrating all Statsig SDK f
 ## Running the Migration Tests
 
 ### Prerequisites
-1. Ensure you have the migration agent installed:
+1. Ensure you have the migration skill installed:
    ```bash
+   ls ~/.claude/skills/statsig-to-launchdarkly-migrator/SKILL.md
+   # or, if you installed the legacy compat shim instead:
    ls ~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md
    ```
 
@@ -50,7 +52,7 @@ This directory contains comprehensive test files demonstrating all Statsig SDK f
    git clone https://github.com/yeutterg/claude-statsig-to-launchdarkly-sdk-migrator.git
    ```
 
-### Testing the Migration Agent
+### Testing the Migration Skill
 
 1. **Test with JavaScript file:**
    ```
@@ -99,7 +101,7 @@ This directory contains comprehensive test files demonstrating all Statsig SDK f
 ### Special Test Cases
 
 #### 1. Experiments (Should NOT be migrated)
-The test files include multiple experiments. The agent should:
+The test files include multiple experiments. The skill should:
 - Detect experiments and warn they cannot be migrated
 - Keep Statsig imports if experiments exist
 - Mark related feature gates as blocked
@@ -135,7 +137,7 @@ To add a new test case:
 
 ### Manual Verification
 
-After running the migration agent:
+After running the migration skill:
 
 1. **Check the migration report** (migration-summary.json)
 2. **Verify all imports** are correctly converted
@@ -157,9 +159,9 @@ After running the migration agent:
 
 ## Notes
 
-- These test files are intentionally comprehensive to stress-test the migration agent
+- These test files are intentionally comprehensive to stress-test the migration skill
 - Not all patterns may be common in real applications
-- The agent should handle partial migrations gracefully
+- The skill should handle partial migrations gracefully
 - Experiments are intentionally included to test the blocking behavior
 - Some edge cases may require manual intervention
 
@@ -168,5 +170,5 @@ After running the migration agent:
 To improve test coverage:
 1. Add new edge cases you encounter
 2. Include real-world migration scenarios
-3. Document any migration agent bugs found
+3. Document any migration skill bugs found
 4. Submit PRs with additional test patterns

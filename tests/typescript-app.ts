@@ -1,7 +1,7 @@
 /**
  * Statsig TypeScript Implementation Test File
  * 
- * This file demonstrates ALL Statsig TypeScript features for testing the migration agent:
+ * This file demonstrates ALL Statsig TypeScript features for testing the migration skill:
  * - Full type annotations
  * - Interface definitions
  * - Generic types with configs
