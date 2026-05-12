@@ -34,3 +34,7 @@ node_modules/
 tests/*.json
 tests/*launchdarkly*
 tests/*ld*
+
+# Migration output artifacts
+migration-versions.json
+migration-summary.json
