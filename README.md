@@ -1,123 +1,161 @@
-# Statsig → LaunchDarkly Migration Agent
+# Claude Code Skill: Statsig → LaunchDarkly SDK Migration
 
-A Claude Code agent that helps developers migrate from Statsig to LaunchDarkly. Covers SDK code, feature flags, and metrics.
+A Claude Code skill that automates migrating from the Statsig SDK to LaunchDarkly. Covers JavaScript, TypeScript, React, and Node.js SDKs. Handles feature gates, dynamic configs, contexts, and observability. Preserves experiments (which have no 1:1 LaunchDarkly mapping).
 
-## Quick Start
+> **What's new in this release**
+> - **Now a Claude Code skill.** Canonical source of truth is `skills/statsig-to-launchdarkly-migrator/SKILL.md` with progressive-disclosure references and helper scripts. The file at `.claude/agents/statsig-to-launchdarkly-sdk-migrator.md` is a thin compatibility shim for users who installed the older agent — it just points at the skill.
+> - **Live SDK version resolution.** A `scripts/resolve-versions.mjs` helper runs `npm view` for every LaunchDarkly package before the skill writes any imports or `package.json` edits. This kills the stale-Node-SDK problem (agentic tools routinely import `launchdarkly-node-server-sdk@5.x` from training data — the current package is `@launchdarkly/node-server-sdk`).
+> - **`ldcli` + `.env` key flow.** Helper scripts install `ldcli` (if missing), accept the LaunchDarkly Client-Side ID on stdin (never via Claude's transcript), and refuse to write `.env` if it isn't gitignored.
+> - **Two eval harnesses.** Static assertions (9 rules over source code + a package.json version check) and an LLM-as-judge runner that scores migrations on a five-dimension rubric.
 
-Paste this into Claude Code (or any Claude interface):
-
-```
-Read the README at https://github.com/launchdarkly-labs/statsig-to-ld-agent and help me migrate from Statsig to LaunchDarkly.
-```
-
-## What Can Be Migrated
-
-| Path | What it does | Tool |
-|------|-------------|------|
-| SDK code | Rewrites Statsig SDK calls → LaunchDarkly SDK | Subagent in this repo |
-| Create flags | Reads Statsig gates via API → creates equivalent LD flags | [statsig-metric-importer-cli](https://github.com/launchdarkly-labs/statsig-metric-importer-cli) |
-| Migrate metrics | Reads Statsig metrics via API → creates LD metrics | [statsig-metric-importer-cli](https://github.com/launchdarkly-labs/statsig-metric-importer-cli) |
-
-## Agent Instructions
-
-When invoked via the starter prompt, follow these steps precisely.
-
-### Step 1 — Ask the user what they want to migrate
-
-Ask the user which of the following they want to do. They may select one or more:
-
-- **A. Migrate SDK code** — rewrite Statsig SDK calls in their codebase to LaunchDarkly SDK calls
-- **B. Create feature flags in LaunchDarkly** — read their Statsig gates and dynamic configs, create equivalent flags in LD
-- **C. Migrate metrics** — read their Statsig metrics, create equivalent metrics in LD
-
-If the user selects multiple paths, execute them in order **A → B → C**. The SDK migration must run before flag creation when both are selected, because the SDK migration produces `migration-summary.json` containing the canonical flag keys that flag creation should match.
-
-### Step 2 — If Path A (SDK code) is selected
-
-Delegate to the SDK migration subagent at `.claude/agents/statsig-to-launchdarkly-sdk-migrator.md`. The subagent will:
-
-- Scan the user's codebase for Statsig SDK calls
-- Detect whether they use client-side or server-side SDKs
-- Transform imports, initialization, flag evaluations, user contexts, and observability features
-- Output `migration-summary.json` with all flag keys found
-
-Ask the user for either their LaunchDarkly **Client-Side ID** (for client-side apps) or **server-side SDK key** (for server-side apps). This value is inserted into their code; it is not used by the agent at runtime.
-
-### Step 3 — If Path B or Path C is selected
-
-Both paths use the same CLI: **[statsig-metric-importer-cli](https://github.com/launchdarkly-labs/statsig-metric-importer-cli)**.
-
-**3a. Ask the user to export their credentials in their shell.** Do NOT ask the user to paste keys into the chat — that would expose them in your context window. Instruct the user to run these commands in their terminal (in the same shell session they'll use to run the CLI):
-
-```bash
-read -rs STATSIG_CONSOLE_KEY && export STATSIG_CONSOLE_KEY
-read -rs LD_API_KEY && export LD_API_KEY
-```
-
-Wait for the user to confirm they've completed this before proceeding.
-
-**3b. Clone and build the CLI** if the user doesn't already have it:
-
-```bash
-git clone https://github.com/launchdarkly-labs/statsig-metric-importer-cli
-cd statsig-metric-importer-cli
-go build ./...
-```
-
-If Go is not installed, instruct the user to install it from https://go.dev/dl/ and re-run.
-
-**3c. Run the appropriate command** for the user's selected path(s). See the CLI's README for full flag reference. Confirm the LD project key with the user before running.
-
-### Step 4 — Summarize results
-
-After all selected paths complete, present a clear summary to the user:
-
-- **Path A**: files changed, flag keys discovered, items blocked by experiments
-- **Path B**: flags created, flags skipped (already existed), incompatible flags
-- **Path C**: metrics converted, metrics skipped, warnings about lost Statsig features
-- **Next steps**: manual experiment migration, parallel SDK testing checklist, anything requiring the LD UI
-
-## Credentials Reference
-
-| Path | Required |
-|------|---------|
-| SDK code (A) | `LD_CLIENT_ID` (client-side) or `LD_SDK_KEY` (server-side) — inserted into code, not exported |
-| Create flags (B) | `LD_API_KEY` + `STATSIG_CONSOLE_KEY` — exported in shell before running CLI |
-| Migrate metrics (C) | `LD_API_KEY` + `STATSIG_CONSOLE_KEY` — exported in shell before running CLI |
-
-Where to find each key:
-- **LD_API_KEY**: LaunchDarkly → Account Settings → Authorization → Personal tokens
-- **LD_CLIENT_ID / LD_SDK_KEY**: LaunchDarkly → Account Settings → Projects → [your project] → [your environment]
-- **STATSIG_CONSOLE_KEY**: Statsig Console → Project Settings → Keys & Environments
-
-Paths B and C share the same credentials — export once and both will work.
-
-## Installation
-
-The SDK migration subagent needs to be installed to your local Claude agents directory:
-
-```bash
-mkdir -p ~/.claude/agents/
-curl -o ~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md \
-  https://raw.githubusercontent.com/launchdarkly-labs/statsig-to-ld-agent/master/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md
-```
-
-The `statsig-metric-importer-cli` is cloned and built on demand by the agent — no pre-install required.
-
-## Repository Structure
+## Repository layout
 
 ```
 .
-├── .claude/
-│   └── agents/
-│       └── statsig-to-launchdarkly-sdk-migrator.md  # SDK migration subagent
-├── tests/
-│   ├── vanilla-js-app.js                             # Test fixture: plain JS
-│   ├── react-app.jsx                                 # Test fixture: React
-│   └── typescript-app.ts                             # Test fixture: TypeScript
-└── README.md
+├── skills/statsig-to-launchdarkly-migrator/
+│   ├── SKILL.md                       # canonical skill (start here)
+│   ├── references/                    # deep-dive docs loaded on demand
+│   │   ├── sdk-key-setup.md
+│   │   ├── version-floors.md
+│   │   ├── experiments.md
+│   │   ├── flag-evaluation.md
+│   │   ├── context-migration.md
+│   │   ├── observability.md
+│   │   └── report-format.md
+│   ├── scripts/                       # helper executables the skill calls
+│   │   ├── resolve-versions.mjs       # npm view for every LD package
+│   │   ├── install-ldcli.mjs          # detect / install ldcli
+│   │   └── write-env.mjs              # write LD key to .env safely
+│   └── evals/
+│       ├── static/                    # CI-able regex/AST assertions
+│       └── judge/                     # LLM-as-judge rubric + runner
+├── .claude/agents/
+│   └── statsig-to-launchdarkly-sdk-migrator.md   # legacy compat shim (points at the skill)
+├── tests/                             # example Statsig apps to migrate
+├── README.md
+└── LICENSE
 ```
+
+## What the skill does
+
+1. **Inventory** every Statsig SDK call (`checkGate`, `getConfig`, `useGateValue`, `useExperiment`, …).
+2. **Resolve current SDK versions** via live `npm view`. Refuses to write imports until this completes.
+3. **Pull the LaunchDarkly Client-Side ID via `ldcli`** and write it to `.env` (never to Claude's transcript).
+4. **Translate** imports, initialization, contexts, flag evaluations, and observability.
+5. **Half-implement-then-test**: create flags off-by-default in the LD test env, deploy, verify via LD Live Events, flip flags, then repeat in prod.
+6. **Generate `migration-summary.json`** with resolved SDK versions, migrated flags, blocked-by-experiment flags, and a verification checklist.
+
+## Quick install (Claude Code)
+
+The skill needs to live in your project (or under `~/.claude/skills/`) so Claude Code can load it and the helper scripts.
+
+```bash
+# Clone (recommended — gives you the helper scripts and evals)
+git clone https://github.com/yeutterg/claude-statsig-to-launchdarkly-sdk-migrator.git
+cd claude-statsig-to-launchdarkly-sdk-migrator
+
+# Or install just the skill globally for any project:
+mkdir -p ~/.claude/skills/
+cp -R skills/statsig-to-launchdarkly-migrator ~/.claude/skills/
+```
+
+To use the skill against your own project, copy `skills/statsig-to-launchdarkly-migrator/` into your project root (or symlink it from `~/.claude/skills/`).
+
+> Legacy compat: if you previously installed the agent file at `~/.claude/agents/statsig-to-launchdarkly-sdk-migrator.md`, it still works — it now just points at the canonical skill. New installs should use the skill path above.
+
+## Usage
+
+In Claude Code, say something like:
+
+> "Migrate this codebase from Statsig to LaunchDarkly."
+
+Claude will load the skill and run the seven phases in order. The skill is intentionally noisy at the boundaries (inventory tables, version table, verification checklist) so you can spot mistakes early.
+
+## Key migration patterns (summary — full canonical patterns in [SKILL.md](skills/statsig-to-launchdarkly-migrator/SKILL.md))
+
+### Imports
+
+```javascript
+// Statsig → LaunchDarkly
+require('statsig-js')                       // → require('launchdarkly-js-client-sdk')
+import statsig from 'statsig-js'            // → import { initialize } from 'launchdarkly-js-client-sdk'
+import { StatsigProvider } from '@statsig/react-bindings'
+                                            // → import { asyncWithLDProvider, useFlags } from 'launchdarkly-react-client-sdk'
+import { StatsigClient } from 'statsig-node'
+                                            // → import { init } from '@launchdarkly/node-server-sdk'
+```
+
+The Node SDK call-out matters: the current package is the scoped `@launchdarkly/node-server-sdk`. The unscoped `launchdarkly-node-server-sdk` is the most common stale-training-data artifact and the static evals fail on it.
+
+### Initialization
+
+```javascript
+const client = initialize(
+  process.env.LD_CLIENT_SIDE_ID,   // never a literal
+  context,
+);
+await client.waitForInitialization(5);
+```
+
+### Flag evaluation
+
+```javascript
+client.variation('gate_name', false)                              // boolean — fallback false
+client.jsonVariation('cfg', { title: 'Default', limit: 10 })      // JSON — full fallback object
+const flags = useFlags(); flags.gateName                          // React — auto camelCase
+```
+
+### Context
+
+```javascript
+{ kind: 'user', key: 'user-123', email: '…', _meta: { privateAttributes: ['ssn'] } }
+```
+
+### SDK-specific flag naming
+
+| SDK | Auto camelCase | Example |
+| --- | --- | --- |
+| React | Yes (default) | `admin_panel_access` → `flags.adminPanelAccess` |
+| JavaScript / Node / Python / Go / Java / iOS / Android | No | `admin_panel_access` stays as-is |
+
+## What's NOT migrated
+
+- **Experiments** (`getExperiment`, `useExperiment`, `useLayer`) — preserved; Statsig SDK stays alongside LaunchDarkly
+- Feature gates that are *part of* an experiment — blocked, reported in summary
+- Complex targeting rules — recreated manually in the LD dashboard
+- Statsig session replay parameters with no LD equivalent (`maxSessionDurationMs`, `recordConsoleErrors`) — logged as `lost_features`
+
+## Running the evals
+
+```bash
+# Static evals (fast, deterministic, CI-able)
+node skills/statsig-to-launchdarkly-migrator/evals/static/run.mjs              # bundled fixtures
+node skills/statsig-to-launchdarkly-migrator/evals/static/run.mjs --input ./   # your migration output
+node skills/statsig-to-launchdarkly-migrator/evals/static/self-test.mjs        # assertion library meta-test
+
+# LLM-as-judge evals (slower, uses claude CLI; run before releasing skill changes)
+node skills/statsig-to-launchdarkly-migrator/evals/judge/run.mjs
+node skills/statsig-to-launchdarkly-migrator/evals/judge/run.mjs --input ./ --out judge-results.json
+```
+
+Eval rules and rubric are documented in `skills/statsig-to-launchdarkly-migrator/evals/README.md`.
+
+## Requirements
+
+- LaunchDarkly JavaScript SDK 3.7.0+ for observability plugins (the skill enforces this automatically via live version lookup)
+- `node` 18+ to run helper scripts and evals
+- `ldcli` for the SDK key flow — the skill detects and installs if missing
+- Claude Code for skill invocation; for the judge eval, the `claude` CLI must be on PATH
+
+## Support
+
+- Issues: https://github.com/yeutterg/claude-statsig-to-launchdarkly-sdk-migrator/issues
+- LaunchDarkly JS SDK docs: https://launchdarkly.com/docs/sdk/client-side/javascript
+- LaunchDarkly React SDK docs: https://launchdarkly.com/docs/sdk/client-side/react/react-web
+- LaunchDarkly Node SDK docs: https://launchdarkly.com/docs/sdk/server-side/node-js
+- `ldcli`: https://github.com/launchdarkly/ldcli
+- Statsig JS SDK docs: https://docs.statsig.com/client/javascript-sdk/
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). Copyright (c) 2025 Greg Yeutter.
+[MIT License](LICENSE)

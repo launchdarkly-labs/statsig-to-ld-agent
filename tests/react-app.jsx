@@ -1,7 +1,7 @@
 /**
  * Statsig React Implementation Test File
  * 
- * This file demonstrates ALL Statsig React SDK features for testing the migration agent:
+ * This file demonstrates ALL Statsig React SDK features for testing the migration skill:
  * - StatsigProvider with plugins
  * - React hooks (useGateValue, useConfig, useExperiment, etc.)
  * - Session Replay and Autocapture in React

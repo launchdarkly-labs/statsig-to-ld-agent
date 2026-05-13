@@ -1,7 +1,7 @@
 /**
  * Statsig JavaScript Implementation Test File
  * 
- * This file demonstrates ALL Statsig features for testing the migration agent:
+ * This file demonstrates ALL Statsig features for testing the migration skill:
  * - Feature Gates
  * - Dynamic Configs
  * - Experiments
