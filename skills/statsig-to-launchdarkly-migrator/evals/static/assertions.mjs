@@ -6,10 +6,12 @@
 
 const STATSIG_PACKAGES = [
   'statsig-js',
+  '@statsig/js-client',
   '@statsig/react-bindings',
   '@statsig/web-analytics',
   '@statsig/session-replay',
   'statsig-node',
+  '@statsig/node-server',
 ];
 
 const LEGACY_LD_NAMES = [
@@ -63,14 +65,15 @@ export function noStatsigImportsUnlessExperimentsPresent(src) {
 }
 
 export function noLiteralStatsigKey(src) {
-  // Statsig keys look like client-XXX… Anything matching survives means a
-  // key got copy-pasted into migrated code.
+  // Statsig keys look like client-XXX… Any literal survives → bad, even if
+  // experiments are preserved (parallel-SDK case): the Statsig key still
+  // must move to process.env.STATSIG_CLIENT_KEY / STATSIG_SERVER_KEY.
   const m = src.match(/['"`]client-[a-zA-Z0-9_-]{8,}['"`]/);
   if (m) {
     return {
       ok: false,
       name: 'noLiteralStatsigKey',
-      detail: `Found a Statsig-shaped key literal in migrated code: ${m[0].slice(0, 16)}…`,
+      detail: `Found a Statsig-shaped key literal in migrated code: ${m[0].slice(0, 16)}… — even with experiments preserved, move it to process.env.STATSIG_CLIENT_KEY (browser) or STATSIG_SERVER_KEY (Node).`,
     };
   }
   return { ok: true, name: 'noLiteralStatsigKey' };
