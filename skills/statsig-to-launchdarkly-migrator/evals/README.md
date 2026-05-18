@@ -26,6 +26,7 @@ The static evals check rules that have a definite right answer:
 - LDContext literals have both `kind` and `key`
 - No `LDUser` type (deprecated pre-context API)
 - No hallucinated method names (`client.getBoolean`, `client.evaluate`, `useLDFlag`, etc.)
+- `client.track()` uses LaunchDarkly arg order (`name, data, metricValue`) — not the Statsig `logEvent(name, value, metadata)` order carried over verbatim
 - `package.json` declares the current major versions for every LaunchDarkly package
 
 The `package.json` check reads `migration-versions.json` (produced by

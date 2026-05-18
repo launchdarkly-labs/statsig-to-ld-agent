@@ -6,7 +6,7 @@ A Claude Code skill that automates migrating from the Statsig SDK to LaunchDarkl
 > - **Now a Claude Code skill.** Canonical source of truth is `skills/statsig-to-launchdarkly-migrator/SKILL.md` with progressive-disclosure references and helper scripts. The file at `.claude/agents/statsig-to-launchdarkly-sdk-migrator.md` is a thin compatibility shim for users who installed the older agent — it just points at the skill.
 > - **Live SDK version resolution.** A `scripts/resolve-versions.mjs` helper runs `npm view` for every LaunchDarkly package before the skill writes any imports or `package.json` edits. This kills the stale-Node-SDK problem (agentic tools routinely import `launchdarkly-node-server-sdk@5.x` from training data — the current package is `@launchdarkly/node-server-sdk`).
 > - **`ldcli` + `.env` key flow.** Helper scripts install `ldcli` (if missing), accept the LaunchDarkly Client-Side ID on stdin (never via Claude's transcript), and refuse to write `.env` if it isn't gitignored.
-> - **Two eval harnesses.** Static assertions (9 rules over source code + a package.json version check) and an LLM-as-judge runner that scores migrations on a five-dimension rubric.
+> - **Two eval harnesses.** Static assertions (10 rules over source code + a package.json version check) and an LLM-as-judge runner that scores migrations on a five-dimension rubric. The newest rule, `trackArgOrder`, catches the Statsig→LD argument-order swap in event logging (`logEvent(name, value, meta)` → `track(name, data, metricValue)`).
 
 ## Repository layout
 
