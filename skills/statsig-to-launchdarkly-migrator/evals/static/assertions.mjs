@@ -172,6 +172,28 @@ export function noLDUserType(src) {
   return { ok: true, name: 'noLDUserType' };
 }
 
+// Statsig: logEvent(name, value, metadata). LaunchDarkly: track(name, data, metricValue).
+// The arg order is swapped — Statsig puts the numeric value at position 2; LD puts the
+// object at position 2 and the numeric value at position 3. Catch the stale shape:
+//   .track('foo', null, { ... })
+//   .track('foo', 12.5, { ... })
+// Both are the Statsig idiom carried over verbatim and break LD's type contract.
+export function trackArgOrder(src) {
+  const re = /\.track\s*\(\s*['"`][^'"`\n]+['"`]\s*,\s*(null|undefined|-?\d+(?:\.\d+)?)\s*,\s*\{/g;
+  const offenders = [];
+  for (const m of src.matchAll(re)) {
+    offenders.push(m[0].slice(0, 80));
+  }
+  if (offenders.length) {
+    return {
+      ok: false,
+      name: 'trackArgOrder',
+      detail: `track() called with Statsig logEvent argument order (value then metadata). LaunchDarkly is track(name, data, metricValue) — swap the 2nd and 3rd args. Example offender: ${offenders[0]}…`,
+    };
+  }
+  return { ok: true, name: 'trackArgOrder' };
+}
+
 export function noWrongLDMethods(src) {
   const wrong = [
     /\bclient\.getBoolean\s*\(/,
@@ -232,4 +254,5 @@ export const SOURCE_ASSERTIONS = [
   contextHasKindAndKey,
   noLDUserType,
   noWrongLDMethods,
+  trackArgOrder,
 ];

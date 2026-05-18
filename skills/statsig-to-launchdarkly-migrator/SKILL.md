@@ -99,6 +99,8 @@ For Node.js use `init(process.env.LD_SDK_KEY)` from `@launchdarkly/node-server-s
 
 For typed SDKs (Node, server-side), prefer `boolVariation` / `stringVariation` / `numberVariation` / `jsonVariation` over the generic `variation`. Never use `null` or `undefined` as a fallback — see [references/flag-evaluation.md](references/flag-evaluation.md).
 
+**Event-logging arg-order gotcha:** Statsig is `logEvent(name, value, metadata)`. LaunchDarkly is `client.track(name, data, metricValue)`. The slots are swapped — object at position 2, numeric value at position 3. The migration must swap them; the static evals reject any `track('x', null, { ... })` or `track('x', 12.5, { ... })` shape because it's the Statsig idiom carried over verbatim.
+
 #### Context (Statsig user → LDContext)
 
 ```javascript

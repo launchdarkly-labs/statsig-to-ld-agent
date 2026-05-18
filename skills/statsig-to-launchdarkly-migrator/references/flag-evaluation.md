@@ -89,3 +89,26 @@ Common stale or wrong names that show up in agentic migrations:
 | `useLDFlag(...)` | `useFlags().flagName` |
 
 The static evals lint for the wrong names.
+
+## Event logging arg order
+
+Statsig and LaunchDarkly swap the 2nd and 3rd argument slots in their event-logging APIs:
+
+| SDK | Signature | Object | Numeric value |
+| --- | --- | --- | --- |
+| Statsig | `logEvent(name, value, metadata)` | slot 3 | slot 2 |
+| LaunchDarkly | `client.track(name, data, metricValue)` | slot 2 | slot 3 |
+
+Migration must swap them. The most common stale-shape failures:
+
+```javascript
+// WRONG — Statsig idiom carried over
+client.track('button_clicked', null, { button_id: 'cta' });
+client.track('purchase_completed', 159.99, { product_id: 'p-1' });
+
+// RIGHT — LD order
+client.track('button_clicked', { button_id: 'cta' });
+client.track('purchase_completed', { product_id: 'p-1' }, 159.99);
+```
+
+The `trackArgOrder` static assertion rejects the wrong shape.
