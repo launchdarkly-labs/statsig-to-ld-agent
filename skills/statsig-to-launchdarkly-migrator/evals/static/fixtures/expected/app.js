@@ -38,6 +38,10 @@ async function boot() {
     limit: 10,
   });
   document.title = homepageConfig.title;
+
+  // Correct LD track() order: (name, data, metricValue)
+  client.track('purchase_completed', { product_id: 'prod-1', currency: 'USD' }, 159.99);
+  client.track('button_clicked', { button_id: 'cta', page: 'home' });
 }
 
 function renderNewDashboard() {}

@@ -43,6 +43,10 @@ When experiments survive, the migrated code looks like:
 import statsig from 'statsig-js';                                // KEPT for experiments
 import { initialize } from 'launchdarkly-js-client-sdk';         // ADDED for migrated flags
 
+// Both keys live in .env — neither is a literal in source.
+const ldClient = initialize(process.env.LD_CLIENT_SIDE_ID, ldContext);
+statsig.initialize(process.env.STATSIG_CLIENT_KEY, statsigUser);
+
 // Experiment paths still use Statsig
 if (statsig.getExperiment("checkout_test").get("variant") === "B") { ... }
 
@@ -53,6 +57,19 @@ if (ldClient.variation("new_dashboard", false)) { ... }
 This is expected and correct during the transition. Tell the user the
 Statsig SDK comes out only after experiments are manually recreated in
 LaunchDarkly and the parallel paths are removed.
+
+### Env-var conventions during parallel operation
+
+| Purpose | Env var | Where to read it |
+| --- | --- | --- |
+| LaunchDarkly browser/React client-side ID | `LD_CLIENT_SIDE_ID` | `initialize(...)`, `asyncWithLDProvider({ clientSideID })` |
+| LaunchDarkly Node server SDK key | `LD_SDK_KEY` | `init(...)` from `@launchdarkly/node-server-sdk` |
+| Statsig client SDK key (browser/React) — kept for experiments | `STATSIG_CLIENT_KEY` | `new StatsigClient(...)`, `<StatsigProvider sdkKey={...}>` |
+| Statsig server SDK key — kept for experiments | `STATSIG_SERVER_KEY` | `Statsig.initialize(...)` server-side |
+
+Both `STATSIG_*` and `LD_*` variables go into `.env` (or `.env.local` for
+framework-specific patterns). The static evals reject any `client-`-shaped
+literal in source — they don't care which SDK owns it.
 
 ## What "manually recreated" means
 

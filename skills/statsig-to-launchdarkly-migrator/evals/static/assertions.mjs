@@ -6,10 +6,12 @@
 
 const STATSIG_PACKAGES = [
   'statsig-js',
+  '@statsig/js-client',
   '@statsig/react-bindings',
   '@statsig/web-analytics',
   '@statsig/session-replay',
   'statsig-node',
+  '@statsig/node-server',
 ];
 
 const LEGACY_LD_NAMES = [
@@ -63,14 +65,15 @@ export function noStatsigImportsUnlessExperimentsPresent(src) {
 }
 
 export function noLiteralStatsigKey(src) {
-  // Statsig keys look like client-XXX… Anything matching survives means a
-  // key got copy-pasted into migrated code.
+  // Statsig keys look like client-XXX… Any literal survives → bad, even if
+  // experiments are preserved (parallel-SDK case): the Statsig key still
+  // must move to process.env.STATSIG_CLIENT_KEY / STATSIG_SERVER_KEY.
   const m = src.match(/['"`]client-[a-zA-Z0-9_-]{8,}['"`]/);
   if (m) {
     return {
       ok: false,
       name: 'noLiteralStatsigKey',
-      detail: `Found a Statsig-shaped key literal in migrated code: ${m[0].slice(0, 16)}…`,
+      detail: `Found a Statsig-shaped key literal in migrated code: ${m[0].slice(0, 16)}… — even with experiments preserved, move it to process.env.STATSIG_CLIENT_KEY (browser) or STATSIG_SERVER_KEY (Node).`,
     };
   }
   return { ok: true, name: 'noLiteralStatsigKey' };
@@ -169,6 +172,28 @@ export function noLDUserType(src) {
   return { ok: true, name: 'noLDUserType' };
 }
 
+// Statsig: logEvent(name, value, metadata). LaunchDarkly: track(name, data, metricValue).
+// The arg order is swapped — Statsig puts the numeric value at position 2; LD puts the
+// object at position 2 and the numeric value at position 3. Catch the stale shape:
+//   .track('foo', null, { ... })
+//   .track('foo', 12.5, { ... })
+// Both are the Statsig idiom carried over verbatim and break LD's type contract.
+export function trackArgOrder(src) {
+  const re = /\.track\s*\(\s*['"`][^'"`\n]+['"`]\s*,\s*(null|undefined|-?\d+(?:\.\d+)?)\s*,\s*\{/g;
+  const offenders = [];
+  for (const m of src.matchAll(re)) {
+    offenders.push(m[0].slice(0, 80));
+  }
+  if (offenders.length) {
+    return {
+      ok: false,
+      name: 'trackArgOrder',
+      detail: `track() called with Statsig logEvent argument order (value then metadata). LaunchDarkly is track(name, data, metricValue) — swap the 2nd and 3rd args. Example offender: ${offenders[0]}…`,
+    };
+  }
+  return { ok: true, name: 'trackArgOrder' };
+}
+
 export function noWrongLDMethods(src) {
   const wrong = [
     /\bclient\.getBoolean\s*\(/,
@@ -229,4 +254,5 @@ export const SOURCE_ASSERTIONS = [
   contextHasKindAndKey,
   noLDUserType,
   noWrongLDMethods,
+  trackArgOrder,
 ];

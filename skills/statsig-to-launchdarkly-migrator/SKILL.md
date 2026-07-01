@@ -17,7 +17,7 @@ Run these phases in order. Do not skip phases.
 
 ### Phase 0 — Inventory
 
-1. Scan the codebase for: `statsig-js`, `@statsig/react-bindings`, `@statsig/web-analytics`, `@statsig/session-replay`, `statsig-node`.
+1. Scan the codebase for: `statsig-js`, `@statsig/js-client`, `@statsig/react-bindings`, `@statsig/web-analytics`, `@statsig/session-replay`, `statsig-node`, `@statsig/node-server`. (`@statsig/js-client` is the scoped successor to `statsig-js` — both appear in real codebases.)
 2. List every `checkGate`, `getConfig`, `useGateValue`, `useConfig`, `getExperiment`, `useExperiment`, `useLayer` call.
 3. List every `Statsig.initialize` / `StatsigProvider` / `StatsigClient` construction site and the user/context object passed.
 4. **Experiment gate**: if `getExperiment` / `useExperiment` / `useLayer` is found, mark those flags BLOCKED. The Statsig SDK stays. See [references/experiments.md](references/experiments.md).
@@ -48,6 +48,8 @@ The migrated code MUST read the Client-Side ID from `.env`, never a string liter
 - Never echoing the key back to the conversation
 
 **Never reuse the Statsig SDK key.** Statsig keys (`client-...`) and LaunchDarkly Client-Side IDs are not interchangeable; the migrated code will silently fail against LD if you wire the wrong one. If a Statsig key string survives in the migrated output, the static evals will fail.
+
+**If experiments are preserved**, the Statsig SDK stays alive in parallel — but its key still must move to `.env` too. Write the existing Statsig key to `STATSIG_CLIENT_KEY` (browser/React) or `STATSIG_SERVER_KEY` (Node) and read it via `process.env.*` in the `new StatsigClient(...)` / `Statsig.initialize(...)` call. This isn't optional: the static evals reject any `client-`-shaped literal in the migrated source, including the Statsig one.
 
 ### Phase 3 — Translate code
 
@@ -96,6 +98,8 @@ For Node.js use `init(process.env.LD_SDK_KEY)` from `@launchdarkly/node-server-s
 | `useConfig("homepage_config")` | `useFlags().homepageConfig` | React auto-camelCases. |
 
 For typed SDKs (Node, server-side), prefer `boolVariation` / `stringVariation` / `numberVariation` / `jsonVariation` over the generic `variation`. Never use `null` or `undefined` as a fallback — see [references/flag-evaluation.md](references/flag-evaluation.md).
+
+**Event-logging arg-order gotcha:** Statsig is `logEvent(name, value, metadata)`. LaunchDarkly is `client.track(name, data, metricValue)`. The slots are swapped — object at position 2, numeric value at position 3. The migration must swap them; the static evals reject any `track('x', null, { ... })` or `track('x', 12.5, { ... })` shape because it's the Statsig idiom carried over verbatim.
 
 #### Context (Statsig user → LDContext)
 
